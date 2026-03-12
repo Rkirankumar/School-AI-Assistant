@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StudyAI — Your Learning Companion</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #0A0A0F; color: #E8E8F0; font-family: 'DM Sans', sans-serif; overflow: hidden; }
+
+  :root {
+    --purple: #C9B1FF; --pink: #FF8ED4; --bg: #0A0A0F;
+    --sidebar: #0F0F1A; --border: #1E1E2E; --surface: #14141F;
+    --text-dim: #888899; --text-muted: #444460;
+  }
+
+  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: #2A2A3A; border-radius: 4px; }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes bounce { 0%,80%,100% { transform:scale(0.7); opacity:0.5; } 40% { transform:scale(1.1); opacity:1; } }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes glow { 0%,100% { box-shadow:0 0 15px rgba(201,177,255,0.2); } 50% { box-shadow:0 0 35px rgba(201,177,255,0.5); } }
+  @keyframes slideIn { from { transform:translateX(-20px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+
+  /* Layout */
+  #app { display:flex; height:100vh; }
+
+  /* Sidebar */
+  #sidebar {
+    width: 250px; min-width: 250px; background: var(--sidebar);
+    border-right: 1px solid var(--border); display:flex; flex-direction:column;
+    transition: all 0.3s ease; overflow:hidden;
+  }
+  #sidebar.collapsed { width:0; min-width:0; }
+
+  .logo { padding:24px 20px 16px; border-bottom:1px solid var(--border); }
+  .logo-text { font-family:'Syne',sans-serif; font-weight:800; font-size:22px; letter-spacing:-0.5px; }
+  .logo-text span:first-child { color:var(--purple); }
+  .logo-text span:last-child { color:var(--pink); }
+  .logo-sub { font-size:10px; color:var(--text-muted); margin-top:4px; letter-spacing:1px; text-transform:uppercase; }
+
+  .sidebar-body { flex:1; overflow-y:auto; padding:16px 12px; }
+  .section-label { font-size:10px; color:var(--text-muted); font-weight:600; letter-spacing:1.5px; text-transform:uppercase; margin:0 4px 10px; }
+
+  .subject-btn, .tool-btn {
+    width:100%; display:flex; align-items:center; gap:10px;
+    padding:9px 10px; border-radius:10px; border:none; cursor:pointer;
+    background:transparent; border-left:3px solid transparent;
+    margin-bottom:3px; transition:all 0.2s; color:#8888A8; font-size:13px;
+    font-family:'DM Sans',sans-serif;
+  }
+  .subject-btn:hover { background:rgba(255,255,255,0.04); color:#D8D8E8; }
+  .subject-btn.active { color:var(--active-color); border-left-color:var(--active-color); background:rgba(255,255,255,0.05); }
+  .subject-icon { font-size:16px; width:22px; text-align:center; flex-shrink:0; }
+
+  .tool-btn { flex-direction:column; align-items:flex-start; }
+  .tool-btn:hover { background:rgba(255,255,255,0.04); }
+  .tool-btn.active { color:var(--purple); border-left-color:var(--purple); background:rgba(201,177,255,0.08); }
+  .tool-name { font-size:12px; font-weight:500; }
+  .tool-desc { font-size:10px; color:var(--text-muted); margin-top:1px; }
+  .tool-btn.active .tool-desc { color:#7070A0; }
+
+  .section-gap { margin-top:20px; }
+
+  .sidebar-footer { padding:12px; border-top:1px solid var(--border); }
+  .tip-card {
+    background:linear-gradient(135deg,#1A1A2E,#1E1E30);
+    border:1px solid #2A2A40; border-radius:10px; padding:10px 12px;
+  }
+  .tip-title { font-size:11px; font-weight:600; color:var(--purple); margin-bottom:4px; }
+  .tip-text { font-size:10px; color:#55556A; line-height:1.5; }
+
+  /* Main */
+  #main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+  /* Header */
+  #header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 20px; border-bottom:1px solid var(--border);
+    background:var(--bg); flex-shrink:0;
+  }
+  .header-left { display:flex; align-items:center; gap:12px; }
+  #toggle-btn {
+    background:none; border:1px solid #2A2A40; border-radius:8px;
+    padding:6px 10px; cursor:pointer; color:var(--text-dim); font-size:14px;
+    transition:all 0.2s;
+  }
+  #toggle-btn:hover { border-color:#C9B1FF55; color:var(--purple); }
+  .header-info { display:flex; flex-direction:column; gap:2px; }
+  .header-title { display:flex; align-items:center; gap:8px; font-family:'Syne',sans-serif; font-weight:700; font-size:15px; }
+  .badge {
+    font-size:11px; padding:2px 10px; border-radius:20px;
+    background:rgba(201,177,255,0.12); color:var(--purple); font-weight:500;
+    font-family:'DM Sans',sans-serif;
+  }
+  .header-sub { font-size:11px; color:var(--text-muted); }
+  .header-right { display:flex; gap:8px; }
+  .icon-btn {
+    background:rgba(255,255,255,0.04); border:1px solid #2A2A40;
+    border-radius:8px; padding:7px 14px; cursor:pointer; color:var(--text-dim);
+    font-size:12px; font-family:'DM Sans',sans-serif; transition:all 0.2s;
+  }
+  .icon-btn:hover { border-color:#C9B1FF55; color:var(--purple); }
+
+  /* Chat */
+  #chat { flex:1; overflow-y:auto; padding:24px; display:flex; flex-direction:column; gap:16px; }
+
+  .msg { display:flex; animation:fadeUp 0.3s ease forwards; }
+  .msg.user { justify-content:flex-end; }
+  .msg.ai { justify-content:flex-start; }
+
+  .ai-avatar {
+    width:34px; height:34px; border-radius:50%; flex-shrink:0;
+    background:linear-gradient(135deg,var(--purple),var(--pink));
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; margin-right:10px; margin-top:2px;
+    animation:glow 3s ease-in-out infinite;
+  }
+
+  .bubble {
+    max-width:72%; padding:12px 16px; font-size:14px;
+    line-height:1.7; word-break:break-word; white-space:pre-wrap;
+  }
+  .bubble.user {
+    background:rgba(201,177,255,0.12); border:1px solid rgba(201,177,255,0.25);
+    border-radius:18px 18px 4px 18px; color:#E8E8F0;
+  }
+  .bubble.ai {
+    background:rgba(255,255,255,0.04); border:1px solid var(--border);
+    border-radius:18px 18px 18px 4px; color:#D8D8E8;
+  }
+
+  .typing-dots { display:flex; gap:5px; padding:14px 16px; }
+  .dot {
+    width:8px; height:8px; border-radius:50%; background:var(--purple);
+    animation:bounce 1.2s ease-in-out infinite;
+  }
+  .dot:nth-child(2) { animation-delay:0.2s; }
+  .dot:nth-child(3) { animation-delay:0.4s; }
+
+  /* Quick prompts */
+  #prompts { padding:0 20px 10px; display:flex; gap:8px; flex-wrap:wrap; }
+  .prompt-chip {
+    background:rgba(255,255,255,0.04); border:1px solid #2A2A40;
+    border-radius:20px; padding:5px 13px; cursor:pointer;
+    color:var(--text-dim); font-size:11px; font-family:'DM Sans',sans-serif;
+    transition:all 0.2s;
+  }
+  .prompt-chip:hover { border-color:rgba(201,177,255,0.4); color:var(--purple); background:rgba(201,177,255,0.06); }
+
+  /* Input area */
+  #input-area {
+    padding:0 20px 20px; flex-shrink:0;
+  }
+  .input-box {
+    display:flex; gap:10px; align-items:flex-end;
+    background:var(--sidebar); border:1px solid #2A2A40;
+    border-radius:16px; padding:12px 14px;
+    transition:border-color 0.2s;
+  }
+  .input-box:focus-within { border-color:rgba(201,177,255,0.4); }
+  #user-input {
+    flex:1; background:none; border:none; resize:none;
+    color:#D8D8E8; font-size:14px; line-height:1.5;
+    font-family:'DM Sans',sans-serif; max-height:120px; overflow-y:auto;
+  }
+  #user-input:focus { outline:none; }
+  #user-input::placeholder { color:var(--text-muted); }
+  #send-btn {
+    width:38px; height:38px; border-radius:10px; border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; flex-shrink:0; transition:all 0.2s;
+    background:linear-gradient(135deg,var(--purple),var(--pink));
+    color:#0A0A0F; font-weight:bold;
+  }
+  #send-btn:disabled { background:#1E1E2E; color:var(--text-muted); cursor:not-allowed; }
+  #send-btn:not(:disabled):hover { transform:scale(1.07); }
+  .input-footer { text-align:center; font-size:10px; color:#2A2A40; margin-top:8px; }
+
+  /* Mobile */
+  @media (max-width: 640px) {
+    #sidebar { position:fixed; z-index:100; height:100%; left:0; top:0; width:240px; }
+    #sidebar.collapsed { transform:translateX(-100%); }
+    .bubble { max-width:85%; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="logo">
+      <div class="logo-text"><span>study</span><span>AI</span></div>
+      <div class="logo-sub">Your Learning Companion</div>
+    </div>
+    <div class="sidebar-body">
+      <div class="section-label">Subjects</div>
+      <div id="subjects"></div>
+      <div class="section-gap"></div>
+      <div class="section-label">Tools</div>
+      <div id="tools"></div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="tip-card">
+        <div class="tip-title">✦ Pro Tip</div>
+        <div class="tip-text">Be specific! "Explain photosynthesis for a 10th grader" gets better results than just "photosynthesis"</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="header">
+      <div class="header-left">
+        <button id="toggle-btn" onclick="toggleSidebar()">☰</button>
+        <div class="header-info">
+          <div class="header-title">
+            <span id="header-subject-icon">✦</span>
+            <span id="header-subject-name">General</span>
+            <span class="badge" id="header-tool">Tutor Me</span>
+          </div>
+          <div class="header-sub" id="header-tool-desc">Step-by-step explanations</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="icon-btn" onclick="clearChat()">New Chat</button>
+      </div>
+    </div>
+
+    <div id="chat"></div>
+
+    <div id="prompts"></div>
+
+    <div id="input-area">
+      <div class="input-box">
+        <textarea id="user-input" rows="1" placeholder="Ask me anything... (Enter to send)"></textarea>
+        <button id="send-btn" disabled onclick="sendMessage()">↑</button>
+      </div>
+      <div class="input-footer">studyAI can make mistakes. Always verify important information.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUBJECTS = [
+  { id:"math", label:"Mathematics", icon:"∑", color:"#FF6B35" },
+  { id:"science", label:"Science", icon:"⚗", color:"#4ECDC4" },
+  { id:"history", label:"History", icon:"📜", color:"#FFE66D" },
+  { id:"english", label:"English", icon:"✍", color:"#A8E6CF" },
+  { id:"coding", label:"Coding", icon:"</>", color:"#C9B1FF" },
+  { id:"general", label:"General", icon:"✦", color:"#FF8ED4" },
+];
+
+const TOOLS = [
+  { id:"tutor", label:"Tutor Me", desc:"Step-by-step explanations" },
+  { id:"quiz", label:"Quiz Me", desc:"Test your knowledge" },
+  { id:"essay", label:"Essay Help", desc:"Outline & feedback" },
+  { id:"solve", label:"Solve It", desc:"Work through problems" },
+];
+
+let currentSubject = SUBJECTS[5];
+let currentTool = TOOLS[0];
+let loading = false;
+let conversationHistory = [];
+
+// Init sidebar
+function initSidebar() {
+  const subjectContainer = document.getElementById('subjects');
+  SUBJECTS.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'subject-btn' + (s.id === currentSubject.id ? ' active' : '');
+    btn.style.setProperty('--active-color', s.color);
+    btn.dataset.id = s.id;
+    btn.innerHTML = `<span class="subject-icon">${s.icon}</span><span>${s.label}</span>`;
+    btn.onclick = () => selectSubject(s.id);
+    subjectContainer.appendChild(btn);
+  });
+
+  const toolContainer = document.getElementById('tools');
+  TOOLS.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'tool-btn' + (t.id === currentTool.id ? ' active' : '');
+    btn.dataset.id = t.id;
+    btn.innerHTML = `<span class="tool-name">${t.label}</span><span class="tool-desc">${t.desc}</span>`;
+    btn.onclick = () => selectTool(t.id);
+    toolContainer.appendChild(btn);
+  });
+}
+
+function selectSubject(id) {
+  currentSubject = SUBJECTS.find(s => s.id === id);
+  document.querySelectorAll('.subject-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.id === id);
+    b.style.setProperty('--active-color', SUBJECTS.find(s=>s.id===b.dataset.id).color);
+  });
+  document.getElementById('header-subject-icon').textContent = currentSubject.icon;
+  document.getElementById('header-subject-name').textContent = currentSubject.label;
+  updatePrompts();
+}
+
+function selectTool(id) {
+  currentTool = TOOLS.find(t => t.id === id);
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+  document.getElementById('header-tool').textContent = currentTool.label;
+  document.getElementById('header-tool-desc').textContent = currentTool.desc;
+  updatePrompts();
+}
+
+function updatePrompts() {
+  const prompts = [
+    currentTool.id === 'quiz' ? `Quiz me on ${currentSubject.label}` : null,
+    currentTool.id === 'tutor' ? `Explain the basics of ${currentSubject.label}` : null,
+    currentTool.id === 'essay' ? `Help me outline an essay` : null,
+    currentTool.id === 'solve' ? `Walk me through a problem` : null,
+    `Give me a study plan for ${currentSubject.label}`,
+    `What are the key concepts in ${currentSubject.label}?`,
+  ].filter(Boolean).slice(0, 3);
+
+  const container = document.getElementById('prompts');
+  container.innerHTML = '';
+  prompts.forEach(p => {
+    const chip = document.createElement('button');
+    chip.className = 'prompt-chip';
+    chip.textContent = p;
+    chip.onclick = () => { document.getElementById('user-input').value = p; autoResize(); updateSendBtn(); };
+    container.appendChild(chip);
+  });
+}
+
+// Chat
+function addMessage(text, isUser) {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = `msg ${isUser ? 'user' : 'ai'}`;
+
+  if (!isUser) {
+    const avatar = document.createElement('div');
+    avatar.className = 'ai-avatar';
+    avatar.textContent = '✦';
+    div.appendChild(avatar);
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${isUser ? 'user' : 'ai'}`;
+  bubble.textContent = text;
+  div.appendChild(bubble);
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+function showTyping() {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.id = 'typing-indicator';
+
+  const avatar = document.createElement('div');
+  avatar.className = 'ai-avatar';
+  avatar.textContent = '✦';
+
+  const dots = document.createElement('div');
+  dots.className = 'bubble ai typing-dots';
+  dots.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+
+  div.appendChild(avatar);
+  div.appendChild(dots);
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typing-indicator');
+  if (el) el.remove();
+}
+
+function clearChat() {
+  conversationHistory = [];
+  document.getElementById('chat').innerHTML = '';
+  addMessage("Fresh start! 🌟 What are we studying today?", false);
+}
+
+async function sendMessage() {
+  const input = document.getElementById('user-input');
+  const text = input.value.trim();
+  if (!text || loading) return;
+
+  loading = true;
+  input.value = '';
+  autoResize();
+  updateSendBtn();
+
+  addMessage(text, true);
+  conversationHistory.push({ role: "user", content: text });
+  showTyping();
+
+  const systemPrompt = `You are an enthusiastic, brilliant AI school assistant helping a student with ${currentSubject.label}.
+Current mode: "${currentTool.label}" — ${currentTool.desc}.
+- Tutor mode: Give clear step-by-step explanations with examples and analogies.
+- Quiz mode: Create 3-5 questions with options. Evaluate their answers.
+- Essay Help: Outline, structure, and writing feedback.
+- Solve It: Work through problems step by step with full working.
+Be engaging, encouraging. Use formatting for clarity. Never be boring.`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+       "Content-Type": "application/json",
+    "x-api-key": "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",   // 👈 ADD THIS LINE
+    "anthropic-version": "2023-06-01",               // 👈 ADD THIS LINE
+    "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: conversationHistory,
+      })
+    });
+
+    const data = await res.json();
+    const reply = data.content?.find(b => b.type === "text")?.text || "Something went wrong. Please try again!";
+    conversationHistory.push({ role: "assistant", content: reply });
+    removeTyping();
+    addMessage(reply, false);
+  } catch (e) {
+    removeTyping();
+    addMessage("Connection error. Please check your internet and try again.", false);
+  }
+
+  loading = false;
+  updateSendBtn();
+}
+
+// Input handling
+function autoResize() {
+  const ta = document.getElementById('user-input');
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+}
+
+function updateSendBtn() {
+  const btn = document.getElementById('send-btn');
+  const val = document.getElementById('user-input').value.trim();
+  btn.disabled = !val || loading;
+}
+
+document.getElementById('user-input').addEventListener('input', () => { autoResize(); updateSendBtn(); });
+document.getElementById('user-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+}
+
+// Boot
+initSidebar();
+updatePrompts();
+addMessage("Hey there! 👋 I'm your AI study buddy. Pick a subject, choose a tool, and let's crush it together. What are you working on today?", false);
+</script>
+</body>
+</html>
